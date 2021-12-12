@@ -1,5 +1,4 @@
-# ramlog-oe
-memory supported logging
+# memory supported logging
 
 This is a fork of Armbian's ramlog (https://github.com/armbian/build/blob/master/packages/bsp/common/usr/lib/armbian/armbian-ramlog).
 
