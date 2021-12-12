@@ -1,0 +1,4 @@
+[ ! -f "/etc/default/ramlog-oe" ] && mv "/etc/default/ramlog-oe.default" "/etc/default/ramlog-oe"
+systemctl --system daemon-reload
+systemctl enable ramlog-oe
+systemctl start ramlog-oe

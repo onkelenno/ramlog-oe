@@ -1,0 +1,11 @@
+Package: ramlog-oe
+Version: 0.1.0
+Section: custom
+Priority: optional
+Architecture: all
+Essential: no
+Installed-Size: 53248
+Depends: coreutils, systemd, cron, logrotate
+Maintainer: onkel_enno
+Description: memory supported logging
+ derived from Armbian ramlog (https://github.com/armbian)

@@ -1,0 +1,91 @@
+#!/bin/bash
+#
+# Copyright (c) Authors: http://www.armbian.com/authors
+#                        https://github.com/onkelenno
+#
+# This file is licensed under the terms of the GNU General Public
+# License version 2. This program is licensed "as is" without any
+# warranty of any kind, whether express or implied.
+
+SIZE=50M
+USE_RSYNC=true
+ENABLED=false
+HDD_LOG=/var/hdd.log
+RAM_LOG=/var/log
+LOG2RAM_LOG="ramlog-oe.log"
+
+[ -f /etc/default/ramlog-oe ] && . /etc/default/ramlog-oe
+[ "$ENABLED" != true ] && exit 0
+
+LOG_OUTPUT="tee -a ${HDD_LOG}/$LOG2RAM_LOG"
+
+isSafe() {
+    if [ ! -d $HDD_LOG ]; then
+        echo "ERROR: $HDD_LOG doesn't exist! Can't sync." >&2
+        exit 1
+    fi
+    NoCache=$(which nocache 2>/dev/null)
+}
+
+syncToDisk() {
+    echo -e "\n\n$(date): Syncing logs to storage\n" | $LOG_OUTPUT
+    syncLogDir ${RAM_LOG} ${HDD_LOG}
+}
+
+syncFromDisk() {
+    echo -e "\n\n$(date): Loading logs from storage\n" | ${LOG_OUTPUT}
+    syncLogDir ${HDD_LOG} ${RAM_LOG}
+}
+
+# $1 -> source directory, $2 -> target directory
+syncLogDir() {
+    isSafe
+    if [ "$USE_RSYNC" = true ]; then
+        ${NoCache} rsync --archive --xattrs --whole-file --verbose --delete --exclude "lost+found" --exclude "${LOG2RAM_LOG}" --links "${1}/" "${2}" 2>&1 | ${LOG_OUTPUT}
+    else
+        ${NoCache} cp --recursive --force --update --preserve=mode,ownership,timestamps "${1}" --no-target-directory "${2}" 2>&1 | ${LOG_OUTPUT}
+    fi
+    sync
+}
+
+case "$1" in
+start)
+    mkdir -p $HDD_LOG
+    mount --bind $RAM_LOG $HDD_LOG
+    mount --make-private $HDD_LOG
+
+    # Check whether zram device is available or we need to use tmpfs
+    LOG_TYPE="tmpfs"
+    for rd in /dev/zram*; do
+        if [[ "$(e2label $rd)" == "log2ram" ]]; then
+            LOG_TYPE="zram"
+            break
+        fi
+    done
+    case $LOG_TYPE in
+    zram)
+        echo -e "Mounting $rd as $RAM_LOG \c" | $LOG_OUTPUT
+        mount --options discard $rd $RAM_LOG 2>&1 | $LOG_OUTPUT
+        ;;
+    tmpfs)
+        echo -e "Setting up $RAM_LOG as tmpfs \c" | $LOG_OUTPUT
+        mount --types tmpfs --options nosuid,noexec,nodev,mode=0755,size=$SIZE ramlog-oe $RAM_LOG 2>&1 | $LOG_OUTPUT
+        ;;
+    esac
+
+    syncFromDisk
+    ;;
+stop)
+    syncToDisk
+    umount --lazy $RAM_LOG
+    umount --lazy $HDD_LOG
+    rmdir $HDD_LOG
+    ;;
+write)
+    syncToDisk
+    ;;
+*)
+    echo "Usage: ${0##*/} {start|stop|write}" >&2
+    exit 1
+    ;;
+esac

@@ -1,0 +1,23 @@
+# ramlog-oe service
+# Stores logs in memory
+# This service may block the boot process for up to 30 sec
+
+[Unit]
+Description=memory supported logging
+DefaultDependencies=no
+Before=rsyslog.service sysinit.target syslog.target
+After=zram-oe.service
+Conflicts=shutdown.target
+RequiresMountsFor=/var/log /var/hdd.log
+IgnoreOnIsolate=yes
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/ramlog-oe/ramlog-oe start
+ExecStop=/usr/lib/ramlog-oe/ramlog-oe stop
+ExecReload=/usr/lib/ramlog-oe/ramlog-oe write
+RemainAfterExit=yes
+TimeoutStartSec=30sec
+
+[Install]
+WantedBy=sysinit.target
