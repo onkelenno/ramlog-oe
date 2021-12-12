@@ -5,7 +5,7 @@ Priority: optional
 Architecture: all
 Essential: no
 Installed-Size: 53248
-Depends: coreutils, systemd, cron, logrotate
+Depends: coreutils, util-linux, systemd, cron, logrotate
 Maintainer: onkel_enno
 Description: memory supported logging
  derived from Armbian ramlog (https://github.com/armbian)
